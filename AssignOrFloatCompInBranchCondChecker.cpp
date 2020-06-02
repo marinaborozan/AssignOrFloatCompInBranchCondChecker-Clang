@@ -89,7 +89,7 @@ void AssignOrFloatCompInBranchCondChecker::checkBranchCondition(const Stmt *Cond
 
 //get original branch statement where condition is used, check if it is a loop
 
-	const ParentMap& parentMap = Ctx.getLocationContext()->getParentMap();
+  const ParentMap& parentMap = Ctx.getLocationContext()->getParentMap();
   if(const Stmt* branchStatement  = parentMap.getParent(Condition)) {
 
   	if( isa<ForStmt>(branchStatement) || isa<WhileStmt>(branchStatement) || isa<DoStmt>(branchStatement)){
