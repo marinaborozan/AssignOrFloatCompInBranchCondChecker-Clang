@@ -15,9 +15,9 @@ class AssignOrFloatCompInBranchCondChecker : public Checker<check::BranchConditi
   mutable std::unique_ptr<BuiltinBug> assignBT;
   mutable std::unique_ptr<BuiltinBug> floatCntBT;
 
-	void ReportBug(CheckerContext &Ctx, SourceRange range, std::unique_ptr<BuiltinBug> &BT) const;
-	bool isRightCommaOperandAssignment(const Stmt *Statement) const;
-	bool isLoopCounterFloat(const Stmt *Statement) const;
+  void ReportBug(CheckerContext &Ctx, SourceRange range, std::unique_ptr<BuiltinBug> &BT) const;
+  bool isRightCommaOperandAssignment(const Stmt *Statement) const;
+  bool isLoopCounterFloat(const Stmt *Statement) const;
 
 public:
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const;
@@ -26,14 +26,13 @@ public:
 }
 
 void AssignOrFloatCompInBranchCondChecker::ReportBug(CheckerContext &Ctx, SourceRange range, std::unique_ptr<BuiltinBug> &BT) const {
+  ExplodedNode *N = Ctx.generateErrorNode();
+  if (!N)
+    return;
 
-    ExplodedNode *N = Ctx.generateErrorNode();
-    if (!N)
-      return;
-
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
-    R->addRange(range);
-    Ctx.emitReport(std::move(R));
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  R->addRange(range);
+  Ctx.emitReport(std::move(R));
 
 }
 
@@ -41,20 +40,19 @@ void AssignOrFloatCompInBranchCondChecker::ReportBug(CheckerContext &Ctx, Source
 
 bool AssignOrFloatCompInBranchCondChecker::isRightCommaOperandAssignment(const Stmt *Statement) const{
 	
-	
-	if(const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Statement)){
-		BinaryOperator::Opcode Op = BinOperator->getOpcode();
+  if(const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Statement)){
+    BinaryOperator::Opcode Op = BinOperator->getOpcode();
 
-		if (BinaryOperator::isCommaOp(Op)){		
-			const Expr* rightEx = BinOperator->getRHS();
-			if(const BinaryOperator *BO = dyn_cast<BinaryOperator>(rightEx)){
-				if(BO->isAssignmentOp())
-					return true;
+    if (BinaryOperator::isCommaOp(Op)){		
+      const Expr* rightEx = BinOperator->getRHS();
+      if(const BinaryOperator *BO = dyn_cast<BinaryOperator>(rightEx)){
+        if(BO->isAssignmentOp())
+	  return true;
 
-			}
-		}
-	}
-	return false;
+      }
+    }
+  }
+  return false;
 
 }
 
@@ -62,26 +60,26 @@ bool AssignOrFloatCompInBranchCondChecker::isRightCommaOperandAssignment(const S
 
 bool AssignOrFloatCompInBranchCondChecker::isLoopCounterFloat(const Stmt *Condition) const{
 
-	if(const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Condition)){
-		BinaryOperator::Opcode Op = BinOperator->getOpcode();
+  if(const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Condition)){
+    BinaryOperator::Opcode Op = BinOperator->getOpcode();
 
-		if (BinaryOperator::isComparisonOp(Op)){  	
+    if (BinaryOperator::isComparisonOp(Op)){  	
 
-			//only check floating point comparison if operator is (==), (<=) or (>=); (<) and (>) is ok
-			if (Op == BO_GT || Op == BO_LT)
-   		return false;
+//only check floating point comparison if operator is (==), (<=) or (>=); (<) and (>) is ok
+      if (Op == BO_GT || Op == BO_LT)
+        return false;
 
-			const Expr* rightEx = BinOperator->getRHS();
-			const Expr* leftEx = BinOperator->getLHS();
-			QualType leftType = leftEx->getType();
-			QualType rightType = rightEx->getType();
+      const Expr* rightEx = BinOperator->getRHS();
+      const Expr* leftEx = BinOperator->getLHS();
+      QualType leftType = leftEx->getType();
+      QualType rightType = rightEx->getType();
 
-   		if(leftType->isFloatingType() && rightType->isFloatingType())
-   			return true;
+      if(leftType->isFloatingType() && rightType->isFloatingType())
+        return true;
     					
-		}
-	}
-	return false;
+    }
+  }
+  return false;
 
 }
 
@@ -92,35 +90,35 @@ void AssignOrFloatCompInBranchCondChecker::checkBranchCondition(const Stmt *Cond
   const ParentMap& parentMap = Ctx.getLocationContext()->getParentMap();
   if(const Stmt* branchStatement  = parentMap.getParent(Condition)) {
 
-  	if( isa<ForStmt>(branchStatement) || isa<WhileStmt>(branchStatement) || isa<DoStmt>(branchStatement)){
+    if( isa<ForStmt>(branchStatement) || isa<WhileStmt>(branchStatement) || isa<DoStmt>(branchStatement)){
 
-			if(isLoopCounterFloat(Condition)){
+      if(isLoopCounterFloat(Condition)){
 
-				if (!floatCntBT)
-    				floatCntBT.reset(new BuiltinBug(
-      	     	this, "Loop counter is float, can cause undefined behavior due to imprecise comparison"));
-				const Expr *Ex = cast<Expr>(Condition);
-				ReportBug(Ctx, Ex->getSourceRange(), floatCntBT);
-			}
-		}
-	}
+        if (!floatCntBT)
+    	  floatCntBT.reset(new BuiltinBug(
+      	       	this, "Loop counter is float, can cause undefined behavior due to imprecise comparison"));
+        const Expr *Ex = cast<Expr>(Condition);
+        ReportBug(Ctx, Ex->getSourceRange(), floatCntBT);
+      }
+    }
+  }
 
 //check for assignment
 
-	if(isRightCommaOperandAssignment(Condition)){
+  if(isRightCommaOperandAssignment(Condition)){
 
-		if (!assignBT)
-    	assignBT.reset(new BuiltinBug(
-      	     	this, "Controlling operand in condition statement is assignment"));
-		const Expr *Ex = cast<Expr>(Condition);
-		ReportBug(Ctx, Ex->getSourceRange(), assignBT);
-	}
+    if (!assignBT)
+      assignBT.reset(new BuiltinBug(
+       	  this, "Controlling operand in condition statement is assignment"));
+    const Expr *Ex = cast<Expr>(Condition);
+    ReportBug(Ctx, Ex->getSourceRange(), assignBT);
+  }
 
 //recursively check all substatements
 
-	for (const Stmt *SubStmt : Condition->children()){
-		checkBranchCondition(SubStmt, Ctx);
-	}
+  for (const Stmt *SubStmt : Condition->children()){
+    checkBranchCondition(SubStmt, Ctx);
+  }
 
 }
 	
