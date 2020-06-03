@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdbool.h>
-
 
 void test(){
 	int x = 1;

@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdbool.h>
 
 void test(){
 	int x=1, y=2, z=3;

@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdbool.h>
 
 void test(){
 	float x = 0.1;

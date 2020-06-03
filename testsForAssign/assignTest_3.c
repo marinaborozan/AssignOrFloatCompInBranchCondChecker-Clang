@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdbool.h>
-
 
 void testFor(){
 	int x=1, y=1, z=1;
