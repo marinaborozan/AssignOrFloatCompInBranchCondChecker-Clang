@@ -2,13 +2,10 @@
 #include <stdbool.h>
 
 
-
-void testParenthesis(){
+void test(){
 	int x = 1;
-	while(x,(x=1))
+
+	while(x,(x=1)) //no warning expected
 		break;
 }
 
-int main(){
-	return 0;
-}

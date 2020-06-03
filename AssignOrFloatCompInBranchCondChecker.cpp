@@ -49,11 +49,13 @@ bool AssignOrFloatCompInBranchCondChecker::isRightCommaOperandAssignment(
     const Stmt *Statement) const {
 
   if (const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Statement)) {
-    BinaryOperator::Opcode Op = BinOperator->getOpcode();
 
-    if (BinaryOperator::isCommaOp(Op)) {
+    if (BinOperator->isCommaOp()) {
+
       const Expr *rightEx = BinOperator->getRHS();
-      if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(rightEx)) {
+      const BinaryOperator *BO = dyn_cast<BinaryOperator>(rightEx);
+
+      if (BO) {
         if (BO->isAssignmentOp())
           return true;
       }
@@ -65,9 +67,9 @@ bool AssignOrFloatCompInBranchCondChecker::isRightCommaOperandAssignment(
 // checks if loop counter is a floating point variable
 
 bool AssignOrFloatCompInBranchCondChecker::isLoopCounterFloat(
-    const Stmt *Condition) const {
+    const Stmt *Statement) const {
 
-  if (const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Condition)) {
+  if (const BinaryOperator *BinOperator = dyn_cast<BinaryOperator>(Statement)) {
     BinaryOperator::Opcode Op = BinOperator->getOpcode();
 
     if (BinaryOperator::isComparisonOp(Op)) {
@@ -101,6 +103,8 @@ void AssignOrFloatCompInBranchCondChecker::checkBranchCondition(
     if (isa<ForStmt>(branchStatement) || isa<WhileStmt>(branchStatement) ||
         isa<DoStmt>(branchStatement)) {
 
+      // check for loop counter float
+
       if (isLoopCounterFloat(Condition)) {
 
         if (!floatCntBT)
@@ -122,12 +126,6 @@ void AssignOrFloatCompInBranchCondChecker::checkBranchCondition(
           this, "Controlling operand in condition statement is assignment"));
     const Expr *Ex = cast<Expr>(Condition);
     ReportBug(Ctx, Ex->getSourceRange(), assignBT);
-  }
-
-  // recursively check all substatements
-
-  for (const Stmt *SubStmt : Condition->children()) {
-    checkBranchCondition(SubStmt, Ctx);
   }
 }
 
